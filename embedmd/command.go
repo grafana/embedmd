@@ -35,8 +35,14 @@ type command struct {
 	substitutions []substitution
 }
 
+var specials = map[string]string{
+	"$embed:{newline}":    "\n",
+	"$embed:{braceOpen}":  "(",
+	"$embed:{braceClose}": ")",
+}
+
 func parseCommand(s string) (*command, error) {
-	s = strings.TrimSpace(s)
+	s = replaceSpecial(strings.TrimSpace(s))
 	if len(s) < 2 || s[0] != '(' || s[len(s)-1] != ')' {
 		return nil, errors.New("argument list should be in parenthesis")
 	}
@@ -102,7 +108,7 @@ func fields(s string) ([]parseField, error) {
 			l := patternLen + subsLen + 4
 			args, s = append(args, parseField{subs: &substitution{
 				pattern:     unescapeSlash(s[2 : patternLen+2]),
-				replacement: replaceSpecial(unescapeSlash(s[patternLen+3 : l-1])),
+				replacement: unescapeSlash(s[patternLen+3 : l-1]),
 			}}), s[l:]
 		} else if s[0] == '/' {
 			sep := nextSlash(s[1:])
@@ -126,7 +132,10 @@ func unescapeSlash(s string) string {
 	return strings.ReplaceAll(s, "\\/", "/")
 }
 func replaceSpecial(s string) string {
-	return strings.ReplaceAll(s, "$embed:{newline}", "\n")
+	for k, v := range specials {
+		s = strings.ReplaceAll(s, k, v)
+	}
+	return s
 }
 
 // nextSlash will find the index of the next unescaped slash in a string.
