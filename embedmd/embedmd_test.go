@@ -304,6 +304,15 @@ func TestReplace(t *testing.T) {
 			out: "func main[[ {",
 		},
 		{
+			name:  "use variables",
+			value: "func main() {",
+			subs: []substitution{{
+				pattern:     "func (\\S+) {",
+				replacement: "$1",
+			}},
+			out: "main()",
+		},
+		{
 			name:  "multi line with multiple",
 			value: content,
 			subs: []substitution{{
