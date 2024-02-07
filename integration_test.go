@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +19,5 @@ func TestIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not read result: %v", err)
 	}
-	if string(got) != string(wants) {
-		t.Fatalf("got bad result (compared to result.md):\n%s", got)
-	}
+	assert.Equal(t, string(wants), string(got))
 }

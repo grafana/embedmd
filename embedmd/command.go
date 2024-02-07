@@ -102,7 +102,7 @@ func fields(s string) ([]parseField, error) {
 			l := patternLen + subsLen + 4
 			args, s = append(args, parseField{subs: &substitution{
 				pattern:     unescapeSlash(s[2 : patternLen+2]),
-				replacement: unescapeSlash(s[patternLen+3 : l-1]),
+				replacement: replaceSpecial(unescapeSlash(s[patternLen+3 : l-1])),
 			}}), s[l:]
 		} else if s[0] == '/' {
 			sep := nextSlash(s[1:])
@@ -122,8 +122,11 @@ func fields(s string) ([]parseField, error) {
 	return args, nil
 }
 
-func unescapeSlash(s2 string) string {
-	return strings.ReplaceAll(s2, "\\/", "/")
+func unescapeSlash(s string) string {
+	return strings.ReplaceAll(s, "\\/", "/")
+}
+func replaceSpecial(s string) string {
+	return strings.ReplaceAll(s, "$embed:{newline}", "\n")
 }
 
 // nextSlash will find the index of the next unescaped slash in a string.
