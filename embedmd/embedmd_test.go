@@ -36,17 +36,20 @@ func main() {
 
 func TestExtract(t *testing.T) {
 	tc := []struct {
-		name       string
-		start, end *string
-		out        string
-		err        string
+		name           string
+		start, end     *string
+		noStart, noEnd bool
+		out            string
+		err            string
 	}{
 		{name: "no limits",
-			out: string(content)},
+			out: content},
 		{name: "only one line",
 			start: ptr("/func main.*\n/"), out: "func main() {\n"},
 		{name: "from package to end",
-			start: ptr("/package main/"), end: ptr("$"), out: string(content[1:])},
+			start: ptr("/package main/"), end: ptr("$"), out: content[1:]},
+		{name: "from package to end - skip start",
+			start: ptr("/package main/"), noStart: true, end: ptr("$"), out: content[13:]},
 		{name: "not matching",
 			start: ptr("/gopher/"), err: "could not match \"/gopher/\""},
 		{name: "part of a line",
@@ -73,13 +76,19 @@ func TestExtract(t *testing.T) {
 
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := extract([]byte(content), tt.start, tt.end)
-			if !eqErr(t, tt.name, err, tt.err) {
-				return
+			b, err := extract([]byte(content),
+				&command{
+					start:   tt.start,
+					end:     tt.end,
+					noStart: tt.noStart,
+					noEnd:   tt.noEnd,
+				})
+			if tt.err == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.err)
 			}
-			if string(b) != tt.out {
-				t.Errorf("case [%s]: expected extracting %q; got %q", tt.name, tt.out, b)
-			}
+			assert.Equal(t, tt.out, string(b))
 		})
 	}
 }
@@ -98,6 +107,12 @@ func TestExtractFromFile(t *testing.T) {
 			cmd:   command{path: "code.go", lang: "go"},
 			files: map[string][]byte{"code.go": []byte(content)},
 			out:   "```go\n" + string(content) + "```\n",
+		},
+		{
+			name:  "no code",
+			cmd:   command{path: "code.go", lang: "go", noCode: true},
+			files: map[string][]byte{"code.go": []byte(content)},
+			out:   content,
 		},
 		{
 			name:    "extract the whole from a different directory",
@@ -326,6 +341,21 @@ import "fmt"
 
 func main[[ {
         fmt.Println["hello, test"[
+}
+`,
+		},
+		{
+			name:  "multi line match",
+			value: content,
+			subs: []substitution{{
+				pattern:     "main\n\n",
+				replacement: "foo",
+			}},
+			out: `
+package fooimport "fmt"
+
+func main() {
+        fmt.Println("hello, test")
 }
 `,
 		},

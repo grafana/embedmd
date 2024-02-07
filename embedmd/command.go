@@ -30,15 +30,22 @@ type parseField struct {
 }
 
 type command struct {
-	path, lang    string
-	start, end    *string
-	substitutions []substitution
+	path, lang             string
+	start, end             *string
+	substitutions          []substitution
+	noCode, noStart, noEnd bool
 }
 
 var specials = map[string]string{
 	"$embed:{newline}":    "\n",
 	"$embed:{braceOpen}":  "(",
 	"$embed:{braceClose}": ")",
+}
+
+var flags = map[string]func(*command){
+	"noCode":  func(c *command) { c.noCode = true },
+	"noStart": func(c *command) { c.noStart = true },
+	"noEnd":   func(c *command) { c.noEnd = true },
 }
 
 func parseCommand(s string) (*command, error) {
@@ -57,6 +64,20 @@ func parseCommand(s string) (*command, error) {
 
 	cmd := &command{path: args[0].plain}
 	args = args[1:]
+
+	for {
+		if len(args) > 0 {
+			if f, ok := flags[args[0].plain]; ok {
+				f(cmd)
+				args = args[1:]
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+
 	if len(args) > 0 && args[0].plain != "" && args[0].plain[0] != '/' {
 		cmd.lang, args = args[0].plain, args[1:]
 	} else {

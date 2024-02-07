@@ -94,7 +94,7 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 		return fmt.Errorf("could not read %s: %v", cmd.path, err)
 	}
 
-	b, err = extract(b, cmd.start, cmd.end)
+	b, err = extract(b, cmd)
 	if err != nil {
 		return fmt.Errorf("could not extract content from %s: %v", cmd.path, err)
 	}
@@ -108,14 +108,18 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 		return fmt.Errorf("could not replace content from %s: %v", cmd.path, err)
 	}
 
-	fmt.Fprintln(w, "```"+cmd.lang)
+	if !cmd.noCode {
+		fmt.Fprintln(w, "```"+cmd.lang)
+	}
 	w.Write(b)
-	fmt.Fprintln(w, "```")
+	if !cmd.noCode {
+		fmt.Fprintln(w, "```")
+	}
 	return nil
 }
 
-func extract(b []byte, start, end *string) ([]byte, error) {
-	if start == nil && end == nil {
+func extract(b []byte, c *command) ([]byte, error) {
+	if c.start == nil && c.end == nil {
 		return b, nil
 	}
 
@@ -134,19 +138,23 @@ func extract(b []byte, start, end *string) ([]byte, error) {
 		return loc, nil
 	}
 
-	if *start != "" {
-		loc, err := match(*start)
+	if *c.start != "" {
+		loc, err := match(*c.start)
 		if err != nil {
 			return nil, err
 		}
-		if end == nil {
+		if c.end == nil {
 			return b[loc[0]:loc[1]], nil
 		}
-		b = b[loc[0]:]
+		start := loc[0]
+		if c.noStart {
+			start = loc[1]
+		}
+		b = b[start:]
 	}
 
-	if *end != "$" {
-		loc, err := match(*end)
+	if *c.end != "$" {
+		loc, err := match(*c.end)
 		if err != nil {
 			return nil, err
 		}
