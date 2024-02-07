@@ -8,7 +8,7 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	cmd := exec.Command("embedmd", "docs.md")
+	cmd := exec.Command("../embedmd/embedmd", "docs.md")
 	cmd.Dir = "sample"
 	got, err := cmd.CombinedOutput()
 	if err != nil {

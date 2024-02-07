@@ -51,6 +51,12 @@ To embed from a point to the end you should use:
 [embedmd]:# (pathOrURL language /start regexp/ $)
 ```
 
+To perform substitutions, use `s/regex/to/`:
+
+```Markdown
+[embedmd]:# (pathOrURL language s/regex/to/ /start regexp/ $)
+```
+
 To embed a whole file, omit both regular expressions:
 
 ```Markdown

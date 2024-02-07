@@ -16,12 +16,21 @@ package embedmd
 import (
 	"errors"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
+var substitutionPattern = regexp.MustCompile(`^s/([^/]+)/([^/]+)/$`)
+
+type substitution struct {
+	pattern     string
+	replacement string
+}
+
 type command struct {
-	path, lang string
-	start, end *string
+	path, lang    string
+	start, end    *string
+	substitutions []substitution
 }
 
 func parseCommand(s string) (*command, error) {
@@ -40,7 +49,7 @@ func parseCommand(s string) (*command, error) {
 
 	cmd := &command{path: args[0]}
 	args = args[1:]
-	if len(args) > 0 && args[0][0] != '/' {
+	if len(args) > 0 && args[0][0] != '/' && !strings.HasPrefix(args[0], "s/") {
 		cmd.lang, args = args[0], args[1:]
 	} else {
 		ext := filepath.Ext(cmd.path[1:])
@@ -48,6 +57,19 @@ func parseCommand(s string) (*command, error) {
 			return nil, errors.New("language is required when file has no extension")
 		}
 		cmd.lang = ext[1:]
+	}
+
+	for {
+		if len(args) > 0 && strings.HasPrefix(args[0], "s/") {
+			sub, err := parseSubstitution(args[0])
+			if err != nil {
+				return nil, err
+			}
+			cmd.substitutions = append(cmd.substitutions, sub)
+			args = args[1:]
+		} else {
+			break
+		}
 	}
 
 	switch {
@@ -60,6 +82,17 @@ func parseCommand(s string) (*command, error) {
 	}
 
 	return cmd, nil
+}
+
+func parseSubstitution(s string) (substitution, error) {
+	submatch := substitutionPattern.FindStringSubmatch(s)
+	if len(submatch) == 0 {
+		return substitution{}, errors.New("substitution should start with s/")
+	}
+	return substitution{
+		pattern:     submatch[1],
+		replacement: submatch[2],
+	}, nil
 }
 
 // fields returns a list of the groups of text separated by blanks,

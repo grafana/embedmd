@@ -13,7 +13,10 @@
 
 package embedmd
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestParseCommand(t *testing.T) {
 	tc := []struct {
@@ -25,9 +28,15 @@ func TestParseCommand(t *testing.T) {
 		{name: "start to end",
 			in:  "(code.go /start/ /end/)",
 			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), end: ptr("/end/")}},
+		{name: "start with replace",
+			in:  "(code.go s/.*/b/ /start/ /end/)",
+			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), end: ptr("/end/"), substitutions: []substitution{{pattern: ".*", replacement: "b"}}}},
 		{name: "only start",
 			in:  "(code.go     /start/)",
 			cmd: command{path: "code.go", lang: "go", start: ptr("/start/")}},
+		{name: "only start with replace",
+			in:  "(code.go s/.*/b/    /start/)",
+			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), substitutions: []substitution{{pattern: ".*", replacement: "b"}}}},
 		{name: "empty list",
 			in:  "()",
 			err: "missing file name"},
@@ -52,6 +61,9 @@ func TestParseCommand(t *testing.T) {
 		{name: "file name and language",
 			in:  "(test.md markdown)",
 			cmd: command{path: "test.md", lang: "markdown"}},
+		{name: "file name and language with replace",
+			in:  "(test.md markdown s/.*/b/)",
+			cmd: command{path: "test.md", lang: "markdown", substitutions: []substitution{{pattern: ".*", replacement: "b"}}}},
 		{name: "multi-line comments",
 			in:  `(doc.go /\/\*/ /\*\//)`,
 			cmd: command{path: "doc.go", lang: "go", start: ptr(`/\/\*/`), end: ptr(`/\*\//`)}},
@@ -85,6 +97,7 @@ func TestParseCommand(t *testing.T) {
 			if want.lang != got.lang {
 				t.Errorf("case [%s]: expected language %q; got %q", tt.name, want.lang, got.lang)
 			}
+			assert.Equal(t, want.substitutions, got.substitutions)
 			if !eqPtr(want.start, got.start) {
 				t.Errorf("case [%s]: expected start %v; got %v", tt.name, str(want.start), str(got.start))
 			}
@@ -112,15 +125,11 @@ func eqPtr(a, b *string) bool {
 }
 
 func eqErr(t *testing.T, id string, err error, msg string) bool {
-	if err == nil && msg == "" {
+	if msg == "" {
+		assert.NoError(t, err)
 		return true
-	}
-	if err == nil && msg != "" {
-		t.Errorf("case [%s]: expected error message %q; but got nothing", id, msg)
+	} else {
+		assert.EqualError(t, err, msg)
 		return false
 	}
-	if err != nil && msg != err.Error() {
-		t.Errorf("case [%s]: expected error message %q; but got %q", id, msg, err)
-	}
-	return false
 }

@@ -16,6 +16,7 @@ package embedmd
 import (
 	"bytes"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -238,7 +239,7 @@ func TestProcess(t *testing.T) {
 			in: "# This is some markdown\n" +
 				"[embedmd]:# (https://fakeurl.com\\main.go)\n" +
 				"Yay!\n",
-			err: "2: could not read https://fakeurl.com\\main.go: parse https://fakeurl.com\\main.go: invalid character \"\\\\\" in host name",
+			err: "2: could not read https://fakeurl.com\\main.go: parse \"https://fakeurl.com\\\\main.go\": invalid character \"\\\\\" in host name",
 		},
 		{
 			name: "ignore commands in code blocks",
@@ -273,6 +274,59 @@ func TestProcess(t *testing.T) {
 			if tt.out != out.String() {
 				t.Errorf("case [%s]: expected output:\n###\n%s\n###; got###\n%s\n###", tt.name, tt.out, out.String())
 			}
+		})
+	}
+}
+
+func TestReplace(t *testing.T) {
+	tc := []struct {
+		name  string
+		value string
+		subs  []substitution
+		out   string
+	}{
+		{
+			name:  "one line with single",
+			value: "func main() {",
+			subs: []substitution{{
+				pattern:     "\\(",
+				replacement: "[",
+			}},
+			out: "func main[) {",
+		},
+		{
+			name:  "one line with multiple",
+			value: "func main() {",
+			subs: []substitution{{
+				pattern:     "[()]",
+				replacement: "[",
+			}},
+			out: "func main[[ {",
+		},
+		{
+			name:  "multi line with multiple",
+			value: content,
+			subs: []substitution{{
+				pattern:     "[()]",
+				replacement: "[",
+			}},
+			out: `
+package main
+
+import "fmt"
+
+func main[[ {
+        fmt.Println["hello, test"[
+}
+`,
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := replace([]byte(tt.value), tt.subs)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.out, string(b))
 		})
 	}
 }
