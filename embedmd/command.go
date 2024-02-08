@@ -19,21 +19,25 @@ import (
 	"strings"
 )
 
-type substitution struct {
-	pattern     string
-	replacement string
+type Substitution struct {
+	Pattern     string `yaml:"pattern"`
+	Replacement string `yaml:"replacement"`
 }
 
 type parseField struct {
-	subs  *substitution
+	subs  *Substitution
 	plain string
 }
 
 type command struct {
-	path, lang             string
-	start, end             *string
-	substitutions          []substitution
-	noCode, noStart, noEnd bool
+	Path          string         `yaml:"src"`
+	Lang          string         `yaml:"lang,omitempty"`
+	Type          string         `yaml:"type"`
+	Start         *string        `yaml:"start"`
+	End           *string        `yaml:"end,omitempty"`
+	IncludeStart  bool           `yaml:"includeStart"`
+	IncludeEnd    bool           `yaml:"includeEnd"`
+	Substitutions []Substitution `yaml:"replace,omitempty"`
 }
 
 var specials = map[string]string{
@@ -42,10 +46,16 @@ var specials = map[string]string{
 	"$embed:{braceClose}": ")",
 }
 
+// enum codeType { code, plain }
+const (
+	typePlain = "plain"
+	typeCode  = "code"
+)
+
 var flags = map[string]func(*command){
-	"noCode":  func(c *command) { c.noCode = true },
-	"noStart": func(c *command) { c.noStart = true },
-	"noEnd":   func(c *command) { c.noEnd = true },
+	"noCode":  func(c *command) { c.Type = typePlain },
+	"noStart": func(c *command) { c.IncludeStart = false },
+	"noEnd":   func(c *command) { c.IncludeEnd = false },
 }
 
 func parseCommand(s string) (*command, error) {
@@ -62,7 +72,7 @@ func parseCommand(s string) (*command, error) {
 		return nil, errors.New("missing file name")
 	}
 
-	cmd := &command{path: args[0].plain}
+	cmd := &command{Path: args[0].plain, Type: typeCode, IncludeStart: true, IncludeEnd: true}
 	args = args[1:]
 
 	for {
@@ -79,18 +89,18 @@ func parseCommand(s string) (*command, error) {
 	}
 
 	if len(args) > 0 && args[0].plain != "" && args[0].plain[0] != '/' {
-		cmd.lang, args = args[0].plain, args[1:]
+		cmd.Lang, args = args[0].plain, args[1:]
 	} else {
-		ext := filepath.Ext(cmd.path[1:])
+		ext := filepath.Ext(cmd.Path[1:])
 		if len(ext) == 0 {
 			return nil, errors.New("language is required when file has no extension")
 		}
-		cmd.lang = ext[1:]
+		cmd.Lang = ext[1:]
 	}
 
 	for {
 		if len(args) > 0 && args[0].subs != nil {
-			cmd.substitutions = append(cmd.substitutions, *args[0].subs)
+			cmd.Substitutions = append(cmd.Substitutions, *args[0].subs)
 			args = args[1:]
 		} else {
 			break
@@ -99,9 +109,9 @@ func parseCommand(s string) (*command, error) {
 
 	switch {
 	case len(args) == 1:
-		cmd.start = &args[0].plain
+		cmd.Start = &args[0].plain
 	case len(args) == 2:
-		cmd.start, cmd.end = &args[0].plain, &args[1].plain
+		cmd.Start, cmd.End = &args[0].plain, &args[1].plain
 	case len(args) > 2:
 		return nil, errors.New("too many arguments")
 	}
@@ -127,9 +137,9 @@ func fields(s string) ([]parseField, error) {
 			}
 
 			l := patternLen + subsLen + 4
-			args, s = append(args, parseField{subs: &substitution{
-				pattern:     unescapeSlash(s[2 : patternLen+2]),
-				replacement: unescapeSlash(s[patternLen+3 : l-1]),
+			args, s = append(args, parseField{subs: &Substitution{
+				Pattern:     unescapeSlash(s[2 : patternLen+2]),
+				Replacement: unescapeSlash(s[patternLen+3 : l-1]),
 			}}), s[l:]
 		} else if s[0] == '/' {
 			sep := nextSlash(s[1:])

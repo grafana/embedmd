@@ -16,10 +16,35 @@ package embedmd
 import (
 	"bytes"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 	"testing"
 )
+
+const yamlCommand = `embed:
+  src: https://raw.githubusercontent.com/grafana/docker-otel-lgtm/73272e8995e9c5460d543d0b909317d5877c3855/examples/go/go.mod
+  template: |
+    ` + "```" + `sh
+    go get {{ .Content }}
+    ` + "```" + `
+  type: plain
+  start: require (
+  end: )
+  includeStart: false
+  includeEnd: false
+  trim: true
+  stripEnd: \
+  replace:
+    - pattern: \s+(\S+) \S+
+      replacement: |
+        $1" \
+`
+
+type yamlReceived struct {
+	Embed *command `yaml:"embed"`
+}
 
 func TestParser(t *testing.T) {
 	tc := []struct {
@@ -40,11 +65,27 @@ func TestParser(t *testing.T) {
 			out:  "one\ntwo\nthree\n",
 		},
 		{
+			name: "yaml command",
+			in:   "---\n" + yamlCommand + "\nheadless: true\n---\none\ntwo\nthree\n",
+			out:  "---\n" + yamlCommand + "\nheadless: true\n---\n\nreceived:\n" + yamlCommand + "\n",
+			run: func(w io.Writer, cmd *command) error {
+				fmt.Fprint(w, "received:\n")
+				encoder := yaml.NewEncoder(w)
+				encoder.SetIndent(2)
+				err := encoder.Encode(yamlReceived{Embed: cmd})
+				assert.NoError(t, err)
+				err = encoder.Close()
+				assert.NoError(t, err)
+
+				return nil
+			},
+		},
+		{
 			name: "a command",
 			in:   "one\n[embedmd]:# (code.go)",
 			out:  "one\n[embedmd]:# (code.go)\nOK\n",
 			run: func(w io.Writer, cmd *command) error {
-				if cmd.path != "code.go" {
+				if cmd.Path != "code.go" {
 					return fmt.Errorf("bad command")
 				}
 				fmt.Fprint(w, "OK\n")
@@ -53,10 +94,17 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "a command then some text",
-			in:   "one\n[embedmd]:# (code.go)\nYay\n",
-			out:  "one\n[embedmd]:# (code.go)\nOK\nYay\n",
+			in: `one
+[embedmd]:# (code.go)
+` + "```" + `go
+main() {
+	fmt.Println("hello")
+}
+` + "```" + `
+Yay`,
+			out: "one\n[embedmd]:# (code.go)\nOK\nYay\n",
 			run: func(w io.Writer, cmd *command) error {
-				if cmd.path != "code.go" {
+				if cmd.Path != "code.go" {
 					return fmt.Errorf("bad command")
 				}
 				fmt.Fprint(w, "OK\n")
@@ -94,11 +142,11 @@ func TestParser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var out bytes.Buffer
 			err := process(&out, strings.NewReader(tt.in), tt.run)
-			if !eqErr(t, tt.name, err, tt.err) {
-				return
-			}
-			if got := out.String(); got != tt.out {
-				t.Errorf("case [%s] expected %q; got %q", tt.name, tt.out, got)
+			if tt.err == "" {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.out, out.String())
+			} else {
+				assert.EqualError(t, err, tt.err)
 			}
 		})
 	}

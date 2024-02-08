@@ -80,10 +80,10 @@ func TestExtract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			b, err := extract([]byte(content),
 				&command{
-					start:   tt.start,
-					end:     tt.end,
-					noStart: tt.noStart,
-					noEnd:   tt.noEnd,
+					Start:        tt.start,
+					End:          tt.end,
+					IncludeStart: !tt.noStart,
+					IncludeEnd:   !tt.noEnd,
 				})
 			if tt.err == "" {
 				assert.NoError(t, err)
@@ -106,37 +106,37 @@ func TestExtractFromFile(t *testing.T) {
 	}{
 		{
 			name:  "extract the whole file",
-			cmd:   command{path: "code.go", lang: "go"},
+			cmd:   command{Path: "code.go", Lang: "go", Type: typeCode},
 			files: map[string][]byte{"code.go": []byte(content)},
 			out:   "```go\n" + string(content) + "```\n",
 		},
 		{
 			name:  "no code",
-			cmd:   command{path: "code.go", lang: "go", noCode: true},
+			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain},
 			files: map[string][]byte{"code.go": []byte(content)},
 			out:   content,
 		},
 		{
 			name:    "extract the whole from a different directory",
-			cmd:     command{path: "code.go", lang: "go"},
+			cmd:     command{Path: "code.go", Lang: "go", Type: typeCode},
 			baseDir: "sample",
 			files:   map[string][]byte{"sample/code.go": []byte(content)},
 			out:     "```go\n" + string(content) + "```\n",
 		},
 		{
 			name:  "added line break",
-			cmd:   command{path: "code.go", lang: "go", start: ptr("/fmt\\.Println/")},
+			cmd:   command{Path: "code.go", Lang: "go", Start: ptr("/fmt\\.Println/"), Type: typeCode},
 			files: map[string][]byte{"code.go": []byte(content)},
 			out:   "```go\nfmt.Println\n```\n",
 		},
 		{
 			name: "missing file",
-			cmd:  command{path: "code.go", lang: "go"},
+			cmd:  command{Path: "code.go", Lang: "go"},
 			err:  "could not read code.go: file does not exist",
 		},
 		{
 			name:  "unmatched regexp",
-			cmd:   command{path: "code.go", lang: "go", start: ptr("/potato/")},
+			cmd:   command{Path: "code.go", Lang: "go", Start: ptr("/potato/")},
 			files: map[string][]byte{"code.go": []byte(content)},
 			err:   "could not extract content from code.go: could not match \"/potato/\"",
 		},
@@ -299,42 +299,42 @@ func TestReplace(t *testing.T) {
 	tc := []struct {
 		name  string
 		value string
-		subs  []substitution
+		subs  []Substitution
 		out   string
 	}{
 		{
 			name:  "one line with single",
 			value: "func main() {",
-			subs: []substitution{{
-				pattern:     "\\(",
-				replacement: "[",
+			subs: []Substitution{{
+				Pattern:     "\\(",
+				Replacement: "[",
 			}},
 			out: "func main[) {",
 		},
 		{
 			name:  "one line with multiple",
 			value: "func main() {",
-			subs: []substitution{{
-				pattern:     "[()]",
-				replacement: "[",
+			subs: []Substitution{{
+				Pattern:     "[()]",
+				Replacement: "[",
 			}},
 			out: "func main[[ {",
 		},
 		{
 			name:  "use variables",
 			value: "func main() {",
-			subs: []substitution{{
-				pattern:     "func (\\S+) {",
-				replacement: "$1",
+			subs: []Substitution{{
+				Pattern:     "func (\\S+) {",
+				Replacement: "$1",
 			}},
 			out: "main()",
 		},
 		{
 			name:  "multi line with multiple",
 			value: content,
-			subs: []substitution{{
-				pattern:     "[()]",
-				replacement: "[",
+			subs: []Substitution{{
+				Pattern:     "[()]",
+				Replacement: "[",
 			}},
 			out: `
 package main
@@ -349,9 +349,9 @@ func main[[ {
 		{
 			name:  "multi line match",
 			value: content,
-			subs: []substitution{{
-				pattern:     "main\n\n",
-				replacement: "foo",
+			subs: []Substitution{{
+				Pattern:     "main\n\n",
+				Replacement: "foo",
 			}},
 			out: `
 package fooimport "fmt"

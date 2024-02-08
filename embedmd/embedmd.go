@@ -89,37 +89,37 @@ type embedder struct {
 }
 
 func (e *embedder) runCommand(w io.Writer, cmd *command) error {
-	b, err := e.Fetch(e.baseDir, cmd.path)
+	b, err := e.Fetch(e.baseDir, cmd.Path)
 	if err != nil {
-		return fmt.Errorf("could not read %s: %v", cmd.path, err)
+		return fmt.Errorf("could not read %s: %v", cmd.Path, err)
 	}
 
 	b, err = extract(b, cmd)
 	if err != nil {
-		return fmt.Errorf("could not extract content from %s: %v", cmd.path, err)
+		return fmt.Errorf("could not extract content from %s: %v", cmd.Path, err)
 	}
 
 	if len(b) > 0 && b[len(b)-1] != '\n' {
 		b = append(b, '\n')
 	}
 
-	b, err = replace(b, cmd.substitutions)
+	b, err = replace(b, cmd.Substitutions)
 	if err != nil {
-		return fmt.Errorf("could not replace content from %s: %v", cmd.path, err)
+		return fmt.Errorf("could not replace content from %s: %v", cmd.Path, err)
 	}
 
-	if !cmd.noCode {
-		fmt.Fprintln(w, "```"+cmd.lang)
+	if cmd.Type == typeCode {
+		fmt.Fprintln(w, "```"+cmd.Lang)
 	}
 	w.Write(b)
-	if !cmd.noCode {
+	if cmd.Type == typeCode {
 		fmt.Fprintln(w, "```")
 	}
 	return nil
 }
 
 func extract(b []byte, c *command) ([]byte, error) {
-	if c.start == nil && c.end == nil {
+	if c.Start == nil && c.End == nil {
 		return b, nil
 	}
 
@@ -138,28 +138,28 @@ func extract(b []byte, c *command) ([]byte, error) {
 		return loc, nil
 	}
 
-	if *c.start != "" {
-		loc, err := match(*c.start)
+	if *c.Start != "" {
+		loc, err := match(*c.Start)
 		if err != nil {
 			return nil, err
 		}
-		if c.end == nil {
+		if c.End == nil {
 			return b[loc[0]:loc[1]], nil
 		}
 		start := loc[0]
-		if c.noStart {
+		if !c.IncludeStart {
 			start = loc[1]
 		}
 		b = b[start:]
 	}
 
-	if *c.end != "$" {
-		loc, err := match(*c.end)
+	if *c.End != "$" {
+		loc, err := match(*c.End)
 		if err != nil {
 			return nil, err
 		}
 		end := loc[1]
-		if c.noEnd {
+		if !c.IncludeEnd {
 			end = loc[0]
 		}
 		b = b[:end]
@@ -168,13 +168,13 @@ func extract(b []byte, c *command) ([]byte, error) {
 	return b, nil
 }
 
-func replace(b []byte, substitutions []substitution) ([]byte, error) {
+func replace(b []byte, substitutions []Substitution) ([]byte, error) {
 	for _, s := range substitutions {
-		re, err := regexp.Compile(s.pattern)
+		re, err := regexp.Compile(s.Pattern)
 		if err != nil {
 			return nil, err
 		}
-		b = re.ReplaceAll(b, []byte(s.replacement))
+		b = re.ReplaceAll(b, []byte(s.Replacement))
 	}
 	return b, nil
 }

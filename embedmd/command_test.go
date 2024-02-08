@@ -27,19 +27,19 @@ func TestParseCommand(t *testing.T) {
 	}{
 		{name: "start to end",
 			in:  "(code.go /start/ /end/)",
-			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), end: ptr("/end/")}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/")}},
 		{name: "start with replace",
 			in:  "(code.go s/.*/b/ /start/ /end/)",
-			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), end: ptr("/end/"), substitutions: []substitution{{pattern: ".*", replacement: "b"}}}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}}},
 		{name: "start with replace with space, escape /, unescape \n in replacement",
 			in:  "(code.go s/.* /$embed:{newline}b\\/ / /start/ /end/)",
-			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), end: ptr("/end/"), substitutions: []substitution{{pattern: ".* ", replacement: "\nb/ "}}}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Substitutions: []Substitution{{Pattern: ".* ", Replacement: "\nb/ "}}}},
 		{name: "only start",
 			in:  "(code.go     /start/)",
-			cmd: command{path: "code.go", lang: "go", start: ptr("/start/")}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/")}},
 		{name: "only start with replace",
 			in:  "(code.go s/.*/b/    /start/)",
-			cmd: command{path: "code.go", lang: "go", start: ptr("/start/"), substitutions: []substitution{{pattern: ".*", replacement: "b"}}}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}}},
 		{name: "empty list",
 			in:  "()",
 			err: "missing file name"},
@@ -48,10 +48,10 @@ func TestParseCommand(t *testing.T) {
 			err: "language is required when file has no extension"},
 		{name: "surrounding blanks",
 			in:  "   \t  (code.go)  \t  ",
-			cmd: command{path: "code.go", lang: "go"}},
+			cmd: command{Path: "code.go", Lang: "go"}},
 		{name: "all flags",
 			in:  "(code.go noCode noStart noEnd)",
-			cmd: command{path: "code.go", lang: "go", noCode: true, noStart: true, noEnd: true}},
+			cmd: command{Path: "code.go", Lang: "go", Type: typePlain, IncludeStart: false, IncludeEnd: false}},
 		{name: "no parenthesis",
 			in:  "{code.go}",
 			err: "argument list should be in parenthesis"},
@@ -66,27 +66,27 @@ func TestParseCommand(t *testing.T) {
 			err: "unbalanced /"},
 		{name: "file name and language",
 			in:  "(test.md markdown)",
-			cmd: command{path: "test.md", lang: "markdown"}},
+			cmd: command{Path: "test.md", Lang: "markdown"}},
 		{name: "file name and language with replace",
 			in:  "(test.md markdown s/.*/b/)",
-			cmd: command{path: "test.md", lang: "markdown", substitutions: []substitution{{pattern: ".*", replacement: "b"}}}},
+			cmd: command{Path: "test.md", Lang: "markdown", Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}}},
 		{name: "multi-line comments",
 			in:  `(doc.go /\/\*/ /\*\//)`,
-			cmd: command{path: "doc.go", lang: "go", start: ptr(`/\/\*/`), end: ptr(`/\*\//`)}},
+			cmd: command{Path: "doc.go", Lang: "go", Start: ptr(`/\/\*/`), End: ptr(`/\*\//`)}},
 		{name: "using $ as end",
 			in:  "(foo.go /start/ $)",
-			cmd: command{path: "foo.go", lang: "go", start: ptr("/start/"), end: ptr("$")}},
+			cmd: command{Path: "foo.go", Lang: "go", Start: ptr("/start/"), End: ptr("$")}},
 		{name: "extra arguments",
 			in: "(foo.go /start/ $ extra)", err: "too many arguments"},
 		{name: "file name with directories",
 			in:  "(foo/bar.go)",
-			cmd: command{path: "foo/bar.go", lang: "go"}},
+			cmd: command{Path: "foo/bar.go", Lang: "go"}},
 		{name: "url",
 			in:  "(http://golang.org/sample.go)",
-			cmd: command{path: "http://golang.org/sample.go", lang: "go"}},
+			cmd: command{Path: "http://golang.org/sample.go", Lang: "go"}},
 		{name: "bad url",
 			in:  "(http://golang:org:sample.go)",
-			cmd: command{path: "http://golang:org:sample.go", lang: "go"}},
+			cmd: command{Path: "http://golang:org:sample.go", Lang: "go"}},
 	}
 
 	for _, tt := range tc {
@@ -97,18 +97,18 @@ func TestParseCommand(t *testing.T) {
 			}
 
 			want, got := tt.cmd, *cmd
-			if want.path != got.path {
-				t.Errorf("case [%s]: expected file %q; got %q", tt.name, want.path, got.path)
+			if want.Path != got.Path {
+				t.Errorf("case [%s]: expected file %q; got %q", tt.name, want.Path, got.Path)
 			}
-			if want.lang != got.lang {
-				t.Errorf("case [%s]: expected language %q; got %q", tt.name, want.lang, got.lang)
+			if want.Lang != got.Lang {
+				t.Errorf("case [%s]: expected language %q; got %q", tt.name, want.Lang, got.Lang)
 			}
-			assert.Equal(t, want.substitutions, got.substitutions)
-			if !eqPtr(want.start, got.start) {
-				t.Errorf("case [%s]: expected start %v; got %v", tt.name, str(want.start), str(got.start))
+			assert.Equal(t, want.Substitutions, got.Substitutions)
+			if !eqPtr(want.Start, got.Start) {
+				t.Errorf("case [%s]: expected start %v; got %v", tt.name, str(want.Start), str(got.Start))
 			}
-			if !eqPtr(want.end, got.end) {
-				t.Errorf("case [%s]: expected end %v; got %v", tt.name, str(want.end), str(got.end))
+			if !eqPtr(want.End, got.End) {
+				t.Errorf("case [%s]: expected end %v; got %v", tt.name, str(want.End), str(got.End))
 			}
 		})
 	}

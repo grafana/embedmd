@@ -16,6 +16,7 @@ package embedmd
 import (
 	"bufio"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 )
@@ -53,17 +54,18 @@ func (c *countingScanner) Scan() bool {
 	return b
 }
 
-type textScanner interface {
-	Text() string
-	Scan() bool
-}
+type state func(io.Writer, *countingScanner, commandRunner) (state, error)
 
-type state func(io.Writer, textScanner, commandRunner) (state, error)
-
-func parsingText(out io.Writer, s textScanner, run commandRunner) (state, error) {
+func parsingText(out io.Writer, s *countingScanner, run commandRunner) (state, error) {
 	if !s.Scan() {
 		return nil, nil // end of file, which is fine.
 	}
+
+	if s.line == 2 && s.Text() == "embed:" { // line numbers start with 1
+		//parse until line with "---" whole file with yaml command
+		return yamlParser{}.parse, nil
+	}
+
 	switch line := s.Text(); {
 	case strings.HasPrefix(line, "[embedmd]:#"):
 		return parsingCmd, nil
@@ -75,7 +77,7 @@ func parsingText(out io.Writer, s textScanner, run commandRunner) (state, error)
 	}
 }
 
-func parsingCmd(out io.Writer, s textScanner, run commandRunner) (state, error) {
+func parsingCmd(out io.Writer, s *countingScanner, run commandRunner) (state, error) {
 	line := s.Text()
 	fmt.Fprintln(out, line)
 	args := line[strings.Index(line, "#")+1:]
@@ -98,7 +100,7 @@ func parsingCmd(out io.Writer, s textScanner, run commandRunner) (state, error) 
 
 type codeParser struct{ print bool }
 
-func (c codeParser) parse(out io.Writer, s textScanner, run commandRunner) (state, error) {
+func (c codeParser) parse(out io.Writer, s *countingScanner, run commandRunner) (state, error) {
 	if c.print {
 		fmt.Fprintln(out, s.Text())
 	}
@@ -114,4 +116,39 @@ func (c codeParser) parse(out io.Writer, s textScanner, run commandRunner) (stat
 		fmt.Fprintln(out, s.Text())
 	}
 	return parsingText, nil
+}
+
+type yamlParser struct {
+	yaml []string
+	drop bool
+}
+
+func (c yamlParser) parse(out io.Writer, s *countingScanner, run commandRunner) (state, error) {
+	if c.drop {
+		if !s.Scan() {
+			return nil, nil
+		}
+	} else {
+		fmt.Fprintln(out, s.Text())
+		if !s.Scan() {
+			return nil, fmt.Errorf("unbalanced yaml section")
+		}
+		if s.Text() == "---" {
+			fmt.Fprintf(out, "%s\n\n", s.Text())
+			c.drop = true
+
+			cmd := &command{}
+			err := yaml.Unmarshal([]byte(strings.Join(c.yaml, "\n")), &cmd)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := run(out, cmd); err != nil {
+				return nil, err
+			}
+		} else {
+			c.yaml = append(c.yaml, s.Text())
+		}
+	}
+	return c.parse, nil
 }
