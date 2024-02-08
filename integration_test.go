@@ -15,7 +15,10 @@ func TestIntegration(t *testing.T) {
 	for _, d := range dir {
 		name := d.Name()
 		t.Run(name, func(t *testing.T) {
-			cmd := exec.Command("../../embedmd/embedmd", "docs.md")
+			cmd := exec.Command("../../embedmd/embedmd",
+				"-m",
+				"lgtm=https://raw.githubusercontent.com/grafana/docker-otel-lgtm/73272e8995e9c5460d543d0b909317d5877c3855",
+				"docs.md")
 			cmd.Dir = filepath.Join(base, name)
 			got, err := cmd.CombinedOutput()
 			if err != nil {

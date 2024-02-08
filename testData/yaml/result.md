@@ -1,6 +1,6 @@
 ---
 embed:
-  src: https://raw.githubusercontent.com/grafana/docker-otel-lgtm/73272e8995e9c5460d543d0b909317d5877c3855/examples/go/go.mod
+  src: $lgtm/examples/go/go.mod
   type: plain
   template: |
     ```sh

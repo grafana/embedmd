@@ -57,14 +57,15 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"text/template"
 )
 
 // Process reads markdown from the given io.Reader searching for an embedmd
 // command. When a command is found, it is executed and the output is written
 // into the given io.Writer with the rest of standard markdown.
-func Process(out io.Writer, in io.Reader, opts ...Option) error {
-	e := embedder{Fetcher: fetcher{}}
+func Process(out io.Writer, in io.Reader, mounts map[string]string, opts ...Option) error {
+	e := embedder{Fetcher: fetcher{}, mounts: mounts}
 	for _, opt := range opts {
 		opt.f(&e)
 	}
@@ -89,6 +90,7 @@ func WithFetcher(c Fetcher) Option {
 type embedder struct {
 	Fetcher
 	baseDir string
+	mounts  map[string]string
 }
 
 type templateArgs struct {
@@ -96,14 +98,18 @@ type templateArgs struct {
 }
 
 func (e *embedder) runCommand(w io.Writer, cmd *command) error {
-	b, err := e.Fetch(e.baseDir, cmd.Path)
+	path := cmd.Path
+	for k, v := range e.mounts {
+		path = strings.ReplaceAll(path, k, v)
+	}
+	b, err := e.Fetch(e.baseDir, path)
 	if err != nil {
-		return fmt.Errorf("could not read %s: %v", cmd.Path, err)
+		return fmt.Errorf("could not read %s: %v", path, err)
 	}
 
 	b, err = extract(b, cmd)
 	if err != nil {
-		return fmt.Errorf("could not extract content from %s: %v", cmd.Path, err)
+		return fmt.Errorf("could not extract content from %s: %v", path, err)
 	}
 
 	if len(b) > 0 && b[len(b)-1] != '\n' {
@@ -112,7 +118,7 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 
 	b, err = replace(b, cmd.Substitutions)
 	if err != nil {
-		return fmt.Errorf("could not replace content from %s: %v", cmd.Path, err)
+		return fmt.Errorf("could not replace content from %s: %v", path, err)
 	}
 
 	if cmd.Trim {
@@ -131,7 +137,7 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 	if cmd.Template != "" {
 		b, err = applyTemplate(b, cmd.Template)
 		if err != nil {
-			return fmt.Errorf("could not apply template to content from %s: %v", cmd.Path, err)
+			return fmt.Errorf("could not apply template to content from %s: %v", path, err)
 		}
 	}
 

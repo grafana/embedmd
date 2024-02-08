@@ -302,7 +302,7 @@ func TestProcess(t *testing.T) {
 			if tt.dir != "" {
 				opts = append(opts, WithBaseDir(tt.dir))
 			}
-			err := Process(&out, strings.NewReader(tt.in), opts...)
+			err := Process(&out, strings.NewReader(tt.in), map[string]string{}, opts...)
 			if !eqErr(t, tt.name, err, tt.err) {
 				return
 			}

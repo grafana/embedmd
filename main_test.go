@@ -65,7 +65,7 @@ func TestEmbedStreams(t *testing.T) {
 		stdin = strings.NewReader(tt.in)
 		buf := &bytes.Buffer{}
 		stdout = buf
-		foundDiff, err := embed(nil, tt.w, tt.d)
+		foundDiff, err := embed(nil, tt.w, tt.d, nil)
 		if !eqErr(t, tt.name, err, tt.err) {
 			continue
 		}
@@ -112,7 +112,7 @@ func TestEmbedFiles(t *testing.T) {
 			stdout = &f.buf
 		}
 
-		_, err := embed([]string{"docs.md"}, tt.w, tt.d)
+		_, err := embed([]string{"docs.md"}, tt.w, tt.d, nil)
 		if !eqErr(t, tt.name, err, tt.err) {
 			continue
 		}

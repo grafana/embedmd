@@ -43,13 +43,27 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/zeitlinger/embedmd/embedmd"
 )
 
 // modified while building by -ldflags.
-var version = "unkown"
+var version = "unknown"
+
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return strings.Join(*i, ", ")
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+var mounts arrayFlags
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: embedmd [flags] [path ...]\n")
@@ -60,6 +74,7 @@ func main() {
 	rewrite := flag.Bool("w", false, "write result to (markdown) file instead of stdout")
 	doDiff := flag.Bool("d", false, "display diffs instead of rewriting files")
 	printVersion := flag.Bool("v", false, "display embedmd version")
+	flag.Var(&mounts, "m", "Mounts for including files or URLs - e.g. -m 'docker-otel-lgtm=https://raw.githubusercontent.com/grafana/docker-otel-lgtm/73272e8995e9c5460d543d0b909317d5877c3855' (can be repeated).")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -68,7 +83,17 @@ func main() {
 		return
 	}
 
-	diff, err := embed(flag.Args(), *rewrite, *doDiff)
+	m := make(map[string]string)
+	for _, mount := range mounts {
+		parts := strings.Split(mount, "=")
+		if len(parts) != 2 {
+			fmt.Fprintf(os.Stderr, "invalid mount: %s\n", mount)
+			os.Exit(2)
+		}
+		m["$"+parts[0]] = parts[1]
+	}
+
+	diff, err := embed(flag.Args(), *rewrite, *doDiff, m)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
@@ -83,7 +108,7 @@ var (
 	stdin  io.Reader = os.Stdin
 )
 
-func embed(paths []string, rewrite, doDiff bool) (foundDiff bool, err error) {
+func embed(paths []string, rewrite, doDiff bool, mounts map[string]string) (foundDiff bool, err error) {
 	if rewrite && doDiff {
 		return false, fmt.Errorf("error: cannot use -w and -d simultaneously")
 	}
@@ -93,11 +118,11 @@ func embed(paths []string, rewrite, doDiff bool) (foundDiff bool, err error) {
 			return false, fmt.Errorf("error: cannot use -w with standard input")
 		}
 		if !doDiff {
-			return false, embedmd.Process(stdout, stdin)
+			return false, embedmd.Process(stdout, stdin, mounts)
 		}
 
 		var out, in bytes.Buffer
-		if err := embedmd.Process(&out, io.TeeReader(stdin, &in)); err != nil {
+		if err := embedmd.Process(&out, io.TeeReader(stdin, &in), mounts); err != nil {
 			return false, err
 		}
 		d, err := diff(in.String(), out.String())
@@ -109,7 +134,7 @@ func embed(paths []string, rewrite, doDiff bool) (foundDiff bool, err error) {
 	}
 
 	for _, path := range paths {
-		d, err := processFile(path, rewrite, doDiff)
+		d, err := processFile(path, rewrite, doDiff, mounts)
 		if err != nil {
 			return false, fmt.Errorf("%s:%v", path, err)
 		}
@@ -138,7 +163,7 @@ func readFile(path string) ([]byte, error) {
 	return ioutil.ReadAll(f)
 }
 
-func processFile(path string, rewrite, doDiff bool) (foundDiff bool, err error) {
+func processFile(path string, rewrite, doDiff bool, mounts map[string]string) (foundDiff bool, err error) {
 	if filepath.Ext(path) != ".md" {
 		return false, fmt.Errorf("not a markdown file")
 	}
@@ -150,7 +175,7 @@ func processFile(path string, rewrite, doDiff bool) (foundDiff bool, err error) 
 	defer f.Close()
 
 	buf := new(bytes.Buffer)
-	if err := embedmd.Process(buf, f, embedmd.WithBaseDir(filepath.Dir(path))); err != nil {
+	if err := embedmd.Process(buf, f, mounts, embedmd.WithBaseDir(filepath.Dir(path))); err != nil {
 		return false, err
 	}
 
