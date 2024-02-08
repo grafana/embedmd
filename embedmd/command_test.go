@@ -27,19 +27,19 @@ func TestParseCommand(t *testing.T) {
 	}{
 		{name: "start to end",
 			in:  "(code.go /start/ /end/)",
-			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/")}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "start with replace",
 			in:  "(code.go s/.*/b/ /start/ /end/)",
-			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}, Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "start with replace with space, escape /, unescape \n in replacement",
 			in:  "(code.go s/.* /$embed:{newline}b\\/ / /start/ /end/)",
-			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Substitutions: []Substitution{{Pattern: ".* ", Replacement: "\nb/ "}}}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), End: ptr("/end/"), Substitutions: []Substitution{{Pattern: ".* ", Replacement: "\nb/ "}}, Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "only start",
 			in:  "(code.go     /start/)",
-			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/")}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "only start with replace",
 			in:  "(code.go s/.*/b/    /start/)",
-			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}}},
+			cmd: command{Path: "code.go", Lang: "go", Start: ptr("/start/"), Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}, Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "empty list",
 			in:  "()",
 			err: "missing file name"},
@@ -48,10 +48,26 @@ func TestParseCommand(t *testing.T) {
 			err: "language is required when file has no extension"},
 		{name: "surrounding blanks",
 			in:  "   \t  (code.go)  \t  ",
-			cmd: command{Path: "code.go", Lang: "go"}},
-		{name: "all flags",
-			in:  "(code.go noCode noStart noEnd)",
-			cmd: command{Path: "code.go", Lang: "go", Type: typePlain, IncludeStart: false, IncludeEnd: false}},
+			cmd: command{Path: "code.go", Lang: "go", Type: typeCode, IncludeStart: true, IncludeEnd: true}},
+		{name: "all options",
+			in: "(code.go noCode noStart noEnd trim trimSuffix:suffix trimPrefix:prefix template:template lang:md s/from/to/ /start/ /end/)",
+			cmd: command{
+				Path:         "code.go",
+				Lang:         "md",
+				Type:         typePlain,
+				Start:        ptr("/start/"),
+				End:          ptr("/end/"),
+				IncludeStart: false,
+				IncludeEnd:   false,
+				Trim:         true,
+				TrimPrefix:   "prefix",
+				TrimSuffix:   "suffix",
+				Template:     "template",
+				Substitutions: []Substitution{{
+					Pattern:     "from",
+					Replacement: "to",
+				}},
+			}},
 		{name: "no parenthesis",
 			in:  "{code.go}",
 			err: "argument list should be in parenthesis"},
@@ -66,27 +82,27 @@ func TestParseCommand(t *testing.T) {
 			err: "unbalanced /"},
 		{name: "file name and language",
 			in:  "(test.md markdown)",
-			cmd: command{Path: "test.md", Lang: "markdown"}},
+			cmd: command{Path: "test.md", Lang: "markdown", Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "file name and language with replace",
 			in:  "(test.md markdown s/.*/b/)",
-			cmd: command{Path: "test.md", Lang: "markdown", Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}}},
+			cmd: command{Path: "test.md", Lang: "markdown", Substitutions: []Substitution{{Pattern: ".*", Replacement: "b"}}, Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "multi-line comments",
 			in:  `(doc.go /\/\*/ /\*\//)`,
-			cmd: command{Path: "doc.go", Lang: "go", Start: ptr(`/\/\*/`), End: ptr(`/\*\//`)}},
+			cmd: command{Path: "doc.go", Lang: "go", Start: ptr(`/\/\*/`), End: ptr(`/\*\//`), Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "using $ as end",
 			in:  "(foo.go /start/ $)",
-			cmd: command{Path: "foo.go", Lang: "go", Start: ptr("/start/"), End: ptr("$")}},
+			cmd: command{Path: "foo.go", Lang: "go", Start: ptr("/start/"), End: ptr("$"), Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "extra arguments",
 			in: "(foo.go /start/ $ extra)", err: "too many arguments"},
 		{name: "file name with directories",
 			in:  "(foo/bar.go)",
-			cmd: command{Path: "foo/bar.go", Lang: "go"}},
+			cmd: command{Path: "foo/bar.go", Lang: "go", Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "url",
 			in:  "(http://golang.org/sample.go)",
-			cmd: command{Path: "http://golang.org/sample.go", Lang: "go"}},
+			cmd: command{Path: "http://golang.org/sample.go", Lang: "go", Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 		{name: "bad url",
 			in:  "(http://golang:org:sample.go)",
-			cmd: command{Path: "http://golang:org:sample.go", Lang: "go"}},
+			cmd: command{Path: "http://golang:org:sample.go", Lang: "go", Type: typeCode, IncludeStart: true, IncludeEnd: true}},
 	}
 
 	for _, tt := range tc {
@@ -95,21 +111,7 @@ func TestParseCommand(t *testing.T) {
 			if !eqErr(t, tt.name, err, tt.err) {
 				return
 			}
-
-			want, got := tt.cmd, *cmd
-			if want.Path != got.Path {
-				t.Errorf("case [%s]: expected file %q; got %q", tt.name, want.Path, got.Path)
-			}
-			if want.Lang != got.Lang {
-				t.Errorf("case [%s]: expected language %q; got %q", tt.name, want.Lang, got.Lang)
-			}
-			assert.Equal(t, want.Substitutions, got.Substitutions)
-			if !eqPtr(want.Start, got.Start) {
-				t.Errorf("case [%s]: expected start %v; got %v", tt.name, str(want.Start), str(got.Start))
-			}
-			if !eqPtr(want.End, got.End) {
-				t.Errorf("case [%s]: expected end %v; got %v", tt.name, str(want.End), str(got.End))
-			}
+			assert.Equal(t, tt.cmd, *cmd)
 		})
 	}
 }

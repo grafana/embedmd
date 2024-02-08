@@ -64,6 +64,13 @@ var flags = map[string]func(*command){
 	"trim":    func(c *command) { c.Trim = true },
 }
 
+var options = map[string]func(string, *command){
+	"lang":       func(v string, c *command) { c.Lang = v },
+	"trimPrefix": func(v string, c *command) { c.TrimPrefix = v },
+	"trimSuffix": func(v string, c *command) { c.TrimSuffix = v },
+	"template":   func(v string, c *command) { c.Template = v },
+}
+
 func parseCommand(s string) (*command, error) {
 	s = replaceSpecial(strings.TrimSpace(s))
 	if len(s) < 2 || s[0] != '(' || s[len(s)-1] != ')' {
@@ -83,7 +90,16 @@ func parseCommand(s string) (*command, error) {
 
 	for {
 		if len(args) > 0 {
-			if f, ok := flags[args[0].plain]; ok {
+			arg := args[0].plain
+			if strings.Contains(arg, ":") {
+				parts := strings.SplitN(arg, ":", 2)
+				if f, ok := options[parts[0]]; ok {
+					f(parts[1], cmd)
+					args = args[1:]
+					continue
+				}
+			}
+			if f, ok := flags[arg]; ok {
 				f(cmd)
 				args = args[1:]
 			} else {
@@ -94,14 +110,16 @@ func parseCommand(s string) (*command, error) {
 		}
 	}
 
-	if len(args) > 0 && args[0].plain != "" && args[0].plain[0] != '/' {
-		cmd.Lang, args = args[0].plain, args[1:]
-	} else {
-		ext := filepath.Ext(cmd.Path[1:])
-		if len(ext) == 0 {
-			return nil, errors.New("language is required when file has no extension")
+	if cmd.Lang == "" {
+		if len(args) > 0 && args[0].plain != "" && args[0].plain[0] != '/' {
+			cmd.Lang, args = args[0].plain, args[1:]
+		} else {
+			ext := filepath.Ext(cmd.Path[1:])
+			if len(ext) == 0 {
+				return nil, errors.New("language is required when file has no extension")
+			}
+			cmd.Lang = ext[1:]
 		}
-		cmd.Lang = ext[1:]
 	}
 
 	for {
