@@ -125,6 +125,15 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 	if cmd.Trim {
 		b = bytes.TrimSpace(b)
 	}
+	if cmd.TrimPrefix != "" {
+		b = bytes.TrimPrefix(b, []byte(cmd.TrimPrefix))
+	}
+	if cmd.TrimSuffix != "" {
+		b = bytes.TrimSuffix(b, []byte(cmd.TrimSuffix))
+	}
+	if cmd.Trim {
+		b = bytes.TrimSpace(b)
+	}
 
 	if cmd.Type == typeCode {
 		fmt.Fprintln(w, "```"+cmd.Lang)

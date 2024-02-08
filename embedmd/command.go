@@ -38,6 +38,8 @@ type command struct {
 	IncludeStart  bool           `yaml:"includeStart"`
 	IncludeEnd    bool           `yaml:"includeEnd"`
 	Trim          bool           `yaml:"trim"`
+	TrimPrefix    string         `yaml:"trimPrefix,omitempty"`
+	TrimSuffix    string         `yaml:"trimSuffix,omitempty"`
 	Template      string         `yaml:"template,omitempty"`
 	Substitutions []Substitution `yaml:"replace,omitempty"`
 }

@@ -30,12 +30,12 @@ const yamlCommand = `embed:
   end: )
   includeStart: false
   includeEnd: false
+  trim: true
+  trimSuffix: \
   template: |
     ` + "```" + `sh
     go get {{ .Content }}
     ` + "```" + `
-  trim: true
-  stripEnd: \
   replace:
     - pattern: \s+(\S+) \S+
       replacement: |

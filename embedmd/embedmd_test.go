@@ -123,6 +123,18 @@ func TestExtractFromFile(t *testing.T) {
 			out:   strings.TrimSpace(content),
 		},
 		{
+			name:  "strip start",
+			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true, TrimPrefix: "package main"},
+			files: map[string][]byte{"code.go": []byte(content)},
+			out:   strings.TrimSpace(content[13:]),
+		},
+		{
+			name:  "strip end",
+			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true, TrimSuffix: "}"},
+			files: map[string][]byte{"code.go": []byte(content)},
+			out:   strings.TrimSpace(content[:len(content)-2]),
+		},
+		{
 			name:    "extract the whole from a different directory",
 			cmd:     command{Path: "code.go", Lang: "go", Type: typeCode},
 			baseDir: "sample",
