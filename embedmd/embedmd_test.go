@@ -117,6 +117,12 @@ func TestExtractFromFile(t *testing.T) {
 			out:   content,
 		},
 		{
+			name:  "trim",
+			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true},
+			files: map[string][]byte{"code.go": []byte(content)},
+			out:   strings.TrimSpace(content),
+		},
+		{
 			name:    "extract the whole from a different directory",
 			cmd:     command{Path: "code.go", Lang: "go", Type: typeCode},
 			baseDir: "sample",
@@ -151,12 +157,12 @@ func TestExtractFromFile(t *testing.T) {
 
 			w := new(bytes.Buffer)
 			err := e.runCommand(w, &tt.cmd)
-			if !eqErr(t, tt.name, err, tt.err) {
-				return
+			if tt.err == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.err)
 			}
-			if w.String() != tt.out {
-				t.Errorf("case [%s]: expected output\n%q\n; got \n%q\n", tt.name, tt.out, w.String())
-			}
+			assert.Equal(t, tt.out, w.String())
 		})
 	}
 }

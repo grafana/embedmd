@@ -122,6 +122,10 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 		}
 	}
 
+	if cmd.Trim {
+		b = bytes.TrimSpace(b)
+	}
+
 	if cmd.Type == typeCode {
 		fmt.Fprintln(w, "```"+cmd.Lang)
 	}

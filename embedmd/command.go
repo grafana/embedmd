@@ -37,6 +37,7 @@ type command struct {
 	End           *string        `yaml:"end,omitempty"`
 	IncludeStart  bool           `yaml:"includeStart"`
 	IncludeEnd    bool           `yaml:"includeEnd"`
+	Trim          bool           `yaml:"trim"`
 	Template      string         `yaml:"template,omitempty"`
 	Substitutions []Substitution `yaml:"replace,omitempty"`
 }
@@ -57,6 +58,7 @@ var flags = map[string]func(*command){
 	"noCode":  func(c *command) { c.Type = typePlain },
 	"noStart": func(c *command) { c.IncludeStart = false },
 	"noEnd":   func(c *command) { c.IncludeEnd = false },
+	"trim":    func(c *command) { c.Trim = true },
 }
 
 func parseCommand(s string) (*command, error) {
