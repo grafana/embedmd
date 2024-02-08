@@ -146,7 +146,11 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 	}
 	w.Write(b)
 	if cmd.Type == typeCode {
-		fmt.Fprintln(w, "```")
+		if bytes.HasSuffix(b, []byte("\n")) {
+			fmt.Fprintln(w, "```")
+		} else {
+			fmt.Fprintln(w, "\n```")
+		}
 	}
 	return nil
 }

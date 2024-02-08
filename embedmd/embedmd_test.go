@@ -118,9 +118,9 @@ func TestExtractFromFile(t *testing.T) {
 		},
 		{
 			name:  "trim",
-			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true},
+			cmd:   command{Path: "code.go", Lang: "go", Type: typeCode, Trim: true},
 			files: map[string][]byte{"code.go": []byte(content)},
-			out:   strings.TrimSpace(content),
+			out:   "```go\n" + strings.TrimSpace(content) + "\n```\n",
 		},
 		{
 			name:  "strip start",
