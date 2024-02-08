@@ -158,7 +158,11 @@ func extract(b []byte, c *command) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b = b[:loc[1]]
+		end := loc[1]
+		if c.noEnd {
+			end = loc[0]
+		}
+		b = b[:end]
 	}
 
 	return b, nil

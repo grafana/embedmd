@@ -54,6 +54,8 @@ func TestExtract(t *testing.T) {
 			start: ptr("/gopher/"), err: "could not match \"/gopher/\""},
 		{name: "part of a line",
 			start: ptr("/fmt.P/"), end: ptr("/hello/"), out: "fmt.Println(\"hello"},
+		{name: "part of a line - skip end",
+			start: ptr("/fmt.P/"), end: ptr("/hello/"), noEnd: true, out: "fmt.Println(\""},
 		{name: "function call",
 			start: ptr("/fmt\\.[^()]*/"), out: "fmt.Println"},
 		{name: "from fmt to end of line",
