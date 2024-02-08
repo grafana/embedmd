@@ -137,7 +137,7 @@ func (c yamlParser) parse(out io.Writer, s *countingScanner, run commandRunner) 
 			fmt.Fprintf(out, "%s\n\n", s.Text())
 			c.drop = true
 
-			cmd := &command{yamlMode: true}
+			cmd := &command{yamlMode: true, Type: typeCode, IncludeStart: true, IncludeEnd: true}
 			err := yaml.Unmarshal([]byte(strings.Join(c.yaml, "\n")), &cmd)
 			if err != nil {
 				return nil, err
