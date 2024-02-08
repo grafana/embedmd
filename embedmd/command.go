@@ -37,6 +37,7 @@ type command struct {
 	End           *string        `yaml:"end,omitempty"`
 	IncludeStart  bool           `yaml:"includeStart"`
 	IncludeEnd    bool           `yaml:"includeEnd"`
+	Template      string         `yaml:"template,omitempty"`
 	Substitutions []Substitution `yaml:"replace,omitempty"`
 }
 

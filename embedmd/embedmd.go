@@ -52,7 +52,10 @@
 package embedmd
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"html/template"
 	"io"
 	"regexp"
 )
@@ -88,6 +91,10 @@ type embedder struct {
 	baseDir string
 }
 
+type templateArgs struct {
+	Content string
+}
+
 func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 	b, err := e.Fetch(e.baseDir, cmd.Path)
 	if err != nil {
@@ -106,6 +113,13 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 	b, err = replace(b, cmd.Substitutions)
 	if err != nil {
 		return fmt.Errorf("could not replace content from %s: %v", cmd.Path, err)
+	}
+
+	if cmd.Template != "" {
+		b, err = applyTemplate(b, cmd.Template)
+		if err != nil {
+			return fmt.Errorf("could not apply template to content from %s: %v", cmd.Path, err)
+		}
 	}
 
 	if cmd.Type == typeCode {
@@ -177,4 +191,22 @@ func replace(b []byte, substitutions []Substitution) ([]byte, error) {
 		b = re.ReplaceAll(b, []byte(s.Replacement))
 	}
 	return b, nil
+}
+
+func applyTemplate(content []byte, templateDef string) ([]byte, error) {
+	t, err := template.New("embedmd").Parse(templateDef)
+	if err != nil {
+		return nil, err
+	}
+	var b bytes.Buffer
+	writer := bufio.NewWriter(&b)
+	err = t.Execute(writer, &templateArgs{Content: string(content)})
+	if err != nil {
+		return nil, err
+	}
+	err = writer.Flush()
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }

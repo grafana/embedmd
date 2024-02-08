@@ -25,15 +25,15 @@ import (
 
 const yamlCommand = `embed:
   src: https://raw.githubusercontent.com/grafana/docker-otel-lgtm/73272e8995e9c5460d543d0b909317d5877c3855/examples/go/go.mod
-  template: |
-    ` + "```" + `sh
-    go get {{ .Content }}
-    ` + "```" + `
   type: plain
   start: require (
   end: )
   includeStart: false
   includeEnd: false
+  template: |
+    ` + "```" + `sh
+    go get {{ .Content }}
+    ` + "```" + `
   trim: true
   stripEnd: \
   replace:
@@ -67,7 +67,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "yaml command",
 			in:   "---\n" + yamlCommand + "\nheadless: true\n---\none\ntwo\nthree\n",
-			out:  "---\n" + yamlCommand + "\nheadless: true\n---\n\nreceived:\n" + yamlCommand + "\n",
+			out:  "---\n" + yamlCommand + "\nheadless: true\n---\n\nreceived:\n" + yamlCommand,
 			run: func(w io.Writer, cmd *command) error {
 				fmt.Fprint(w, "received:\n")
 				encoder := yaml.NewEncoder(w)

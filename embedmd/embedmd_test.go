@@ -372,6 +372,30 @@ func main() {
 	}
 }
 
+func TestTemplate(t *testing.T) {
+	tc := []struct {
+		name     string
+		value    string
+		template string
+		out      string
+	}{
+		{
+			name:     "single line",
+			value:    "func main() {",
+			template: "```go\n{{ .Content }}\n```",
+			out:      "```go\nfunc main() {\n```",
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := applyTemplate([]byte(tt.value), tt.template)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.out, string(b))
+		})
+	}
+}
+
 type mixedContentProvider struct {
 	files, urls map[string][]byte
 }
