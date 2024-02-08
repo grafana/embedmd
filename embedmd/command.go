@@ -42,6 +42,7 @@ type command struct {
 	TrimSuffix    string         `yaml:"trimSuffix,omitempty"`
 	Template      string         `yaml:"template,omitempty"`
 	Substitutions []Substitution `yaml:"replace,omitempty"`
+	yamlMode      bool
 }
 
 var specials = map[string]string{

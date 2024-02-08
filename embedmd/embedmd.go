@@ -55,9 +55,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"html/template"
 	"io"
 	"regexp"
+	"text/template"
 )
 
 // Process reads markdown from the given io.Reader searching for an embedmd
@@ -115,13 +115,6 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 		return fmt.Errorf("could not replace content from %s: %v", cmd.Path, err)
 	}
 
-	if cmd.Template != "" {
-		b, err = applyTemplate(b, cmd.Template)
-		if err != nil {
-			return fmt.Errorf("could not apply template to content from %s: %v", cmd.Path, err)
-		}
-	}
-
 	if cmd.Trim {
 		b = bytes.TrimSpace(b)
 	}
@@ -133,6 +126,13 @@ func (e *embedder) runCommand(w io.Writer, cmd *command) error {
 	}
 	if cmd.Trim {
 		b = bytes.TrimSpace(b)
+	}
+
+	if cmd.Template != "" {
+		b, err = applyTemplate(b, cmd.Template)
+		if err != nil {
+			return fmt.Errorf("could not apply template to content from %s: %v", cmd.Path, err)
+		}
 	}
 
 	if cmd.Type == typeCode {
@@ -151,10 +151,14 @@ func extract(b []byte, c *command) ([]byte, error) {
 	}
 
 	match := func(s string) ([]int, error) {
-		if len(s) <= 2 || s[0] != '/' || s[len(s)-1] != '/' {
-			return nil, fmt.Errorf("missing slashes (/) around %q", s)
+		pattern := s
+		if !c.yamlMode {
+			if len(s) <= 2 || s[0] != '/' || s[len(s)-1] != '/' {
+				return nil, fmt.Errorf("missing slashes (/) around %q", s)
+			}
+			pattern = s[1 : len(s)-1]
 		}
-		re, err := regexp.CompilePOSIX(s[1 : len(s)-1])
+		re, err := regexp.CompilePOSIX(pattern)
 		if err != nil {
 			return nil, err
 		}

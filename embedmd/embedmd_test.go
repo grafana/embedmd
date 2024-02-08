@@ -399,9 +399,9 @@ func TestTemplate(t *testing.T) {
 	}{
 		{
 			name:     "single line",
-			value:    "func main() {",
+			value:    "func main() \"",
 			template: "```go\n{{ .Content }}\n```",
-			out:      "```go\nfunc main() {\n```",
+			out:      "```go\nfunc main() \"\n```",
 		},
 	}
 
