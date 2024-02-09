@@ -142,6 +142,9 @@ func (c yamlParser) parse(out io.Writer, s *countingScanner, run commandRunner) 
 			if err != nil {
 				return nil, err
 			}
+			if cmd.Type != typePlain && cmd.Type != typeCode {
+				return nil, fmt.Errorf("invalid type: %s", cmd.Type)
+			}
 
 			if err := run(out, cmd); err != nil {
 				return nil, err

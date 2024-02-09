@@ -123,6 +123,18 @@ func TestExtractFromFile(t *testing.T) {
 			out:   "```go\n" + strings.TrimSpace(content) + "\n```\n",
 		},
 		{
+			name:  "trim plain",
+			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true},
+			files: map[string][]byte{"code.go": []byte(content)},
+			out:   strings.TrimSpace(content),
+		},
+		{
+			name:  "trim plain with yaml - because files should always end with a newline",
+			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true, yamlMode: true},
+			files: map[string][]byte{"code.go": []byte(content)},
+			out:   strings.TrimSpace(content) + "\n",
+		},
+		{
 			name:  "strip start",
 			cmd:   command{Path: "code.go", Lang: "go", Type: typePlain, Trim: true, TrimPrefix: "package main"},
 			files: map[string][]byte{"code.go": []byte(content)},

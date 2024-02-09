@@ -74,6 +74,22 @@ files, since `.go` matches `go`). However, this will fail with other files like
 [embedmd]:# (file.ext)
 ```
 
+You can use the following options to modify the behavior of `embedmd`:
+
+[embedmd]:# (pathOrURL <flags> language s/regex/to/ /start regexp/ /end regexp/)
+                                                                                 
+Unary flags:
+* `noCode`: Do not wrap the embedded content in a code block.
+* `noStart`: Do not include the content that matches the start regular expression.
+* `noEnd`: Do not include the content that matches the end regular expression.
+* `trim`: Trim the content before embedding it.
+
+Options in the form of `key:value`:
+* `lang`: The language of the embedded content.
+* `template`: A template to use to format the content. It uses Go's text/template package.
+* `trimPrefix`: A string to trim from the start.
+* `trimSuffix`: A string to trim from the end.
+
 ## Installation
 
 > You can install Go by following [these instructions](https://golang.org/doc/install).
@@ -142,6 +158,94 @@ You can also see how to get the current time:
 [embedmd]:# (hello.go /time\.[^)]*\)/)
 ```
 
+### YAML Mode
+
+`embedmd` also supports YAML mode, which is useful for more complex
+scenarios. For example, the following command will embed the content of
+`go.mod` into the `docs.md` file, and then use a template to generate a
+`go get` command:
+
+```markdown
+---
+embed:
+  src: $lgtm/examples/go/go.mod
+  type: plain
+  template: |
+    ```sh
+    go get {{ .Content }}
+    ```
+  start: "require \\("
+  end: "\\)"
+  includeStart: false
+  includeEnd: false
+  trim: true
+  trimSuffix: \
+  replace:
+    - pattern: \s+(\S+) \S+
+      replacement: |-
+        "$1" \
+          
+headless: true
+description: Instrument Go dependencies
+---
+
+
+```
+
+will result in the following:
+
+```markdown
+---
+embed:
+  src: $lgtm/examples/go/go.mod
+  type: plain
+  template: |
+    ```sh
+    go get {{ .Content }}
+    ```
+  start: "require \\("
+  end: "\\)"
+  includeStart: false
+  includeEnd: false
+  trim: true
+  trimSuffix: \
+  replace:
+    - pattern: \s+(\S+) \S+
+      replacement: |-
+        "$1" \
+          
+headless: true
+description: Instrument Go dependencies
+---
+
+`` ` ```` ` ```` ` ``sh
+go get "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp" \
+  "go.opentelemetry.io/contrib/instrumentation/runtime" \
+  "go.opentelemetry.io/otel" \
+  "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp" \
+  "go.opentelemetry.io/otel/exporters/otlp/otlptrace" \
+  "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp" \
+  "go.opentelemetry.io/otel/sdk" \
+  "go.opentelemetry.io/otel/sdk/metric"
+`` ` ```` ` ```` ` ``
+```
+         
+All the options are optional, and the following is a list of all the
+options available - these are the same options as with the embedded mode:
+
+* `src`: The source of the content to embed. It can be a path or a URL - and can start with a mount point like `$lgtm` (see [flags](#flags)).
+* `type`: The type of the content formatting. It can be `plain` or `code`.
+* `lang`: The language of the content.
+* `template`: A template to use to format the content. It uses Go's text/template package.
+* `start`: A regular expression to match the start of the content to embed.
+* `end`: A regular expression to match the end of the content to embed. If not provided, the content will be the `start` expression.
+* `includeStart`: Whether to include the line that matches the `start` expression.
+* `includeEnd`: Whether to include the line that matches the `end` expression.
+* `trim`: Whether to trim the content (trim space at start and end).
+* `trimPrefix`: A string to trim from the start.
+* `trimSuffix`: A string to trim from the end. 
+* `replace`: A list of replacements to perform on the content (see example above).
+
 # Flags
 
 * `-w`: Executing `embedmd -w docs.md` will modify `docs.md`
@@ -151,6 +255,8 @@ and add the corresponding code snippets, as shown in
 * `-d`: Executing `embedmd -d docs.md` will display the difference
 between the contents of `docs.md` and the output of
 `embedmd docs.md`.
+
+* `-m`: Register a mount point. For example, `embedmd -m $lgtm=https://raw.githubusercontent.com/lgtmco/lgtm/master` will allow you to use `$lgtm/examples/go.mod` as a mount point in the `src` field. The result will be the same as if you had used `https://raw.githubusercontent.com/lgtmco/lgtm/master/examples/go/go.mod`.
 
 ### Disclaimer
 
