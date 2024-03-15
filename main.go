@@ -45,8 +45,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/grafana/embedmd/embedmd"
 	"github.com/pmezard/go-difflib/difflib"
-	"github.com/zeitlinger/embedmd/embedmd"
 )
 
 // modified while building by -ldflags.

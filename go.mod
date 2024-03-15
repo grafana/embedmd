@@ -1,4 +1,4 @@
-module github.com/zeitlinger/embedmd
+module github.com/grafana/embedmd
 
 go 1.22
 
